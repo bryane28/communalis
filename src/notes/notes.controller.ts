@@ -1,34 +1,54 @@
-import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Note } from '../models/note.schema';
+import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException, BadRequestException, UseGuards, Query } from '@nestjs/common';
+import { NotesService } from './notes.service';
+import { AuthGuard } from '@nestjs/passport';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { QueryNoteDto } from './DTO/query-note.dto';
+import { CreateNoteDto } from './DTO/create-note.dto';
+import { UpdateNoteDto } from './DTO/update-note.dto';
 
 @Controller('notes')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class NotesController {
-  constructor(@InjectModel(Note.name) private noteModel: Model<Note>) {}
+  constructor(private readonly notesService: NotesService) {}
 
   @Get()
-  async findAll() {
-    return this.noteModel.find();
+  @Roles('admin', 'formateur')
+  async findAll(@Query() query: QueryNoteDto) {
+    return this.notesService.findAll(query);
   }
 
   @Get(':id')
+  @Roles('admin', 'formateur', 'parent')
   async findOne(@Param('id') id: string) {
-    return this.noteModel.findById(id);
+    const note = await this.notesService.findOne(id);
+    if (!note) throw new NotFoundException('Note non trouvée');
+    return note;
   }
 
   @Post()
-  async create(@Body() dto: any) {
-    return this.noteModel.create(dto);
+  @Roles('formateur')
+  async create(@Body() dto: CreateNoteDto) {
+    try {
+      return await this.notesService.create(dto);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: any) {
-    return this.noteModel.findByIdAndUpdate(id, dto, { new: true });
+  @Roles('formateur')
+  async update(@Param('id') id: string, @Body() dto: UpdateNoteDto) {
+    const note = await this.notesService.update(id, dto);
+    if (!note) throw new NotFoundException('Note non trouvée');
+    return note;
   }
 
   @Delete(':id')
+  @Roles('formateur')
   async delete(@Param('id') id: string) {
-    return this.noteModel.findByIdAndDelete(id);
+    const note = await this.notesService.delete(id);
+    if (!note) throw new NotFoundException('Note non trouvée');
+    return { message: 'Note supprimée' };
   }
 }
