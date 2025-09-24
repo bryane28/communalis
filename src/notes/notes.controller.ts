@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException, BadRequestException, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException, BadRequestException, UseGuards, Query, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { NotesService } from './notes.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/roles.decorator';
@@ -7,15 +8,17 @@ import { QueryNoteDto } from './DTO/query-note.dto';
 import { CreateNoteDto } from './DTO/create-note.dto';
 import { UpdateNoteDto } from './DTO/update-note.dto';
 
+@ApiTags('notes')
+@ApiBearerAuth('bearer')
 @Controller('notes')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Get()
-  @Roles('admin', 'formateur')
-  async findAll(@Query() query: QueryNoteDto) {
-    return this.notesService.findAll(query);
+  @Roles('admin', 'formateur', 'parent')
+  async findAll(@Query() query: QueryNoteDto, @Req() req: any) {
+    return this.notesService.findAll(query, req.user);
   }
 
   @Get(':id')

@@ -20,3 +20,7 @@ export class Note extends Document {
 }
 
 export const NoteSchema = SchemaFactory.createForClass(Note);
+// Indexes to speed up common queries
+NoteSchema.index({ studentId: 1 });
+NoteSchema.index({ formateurId: 1 });
+NoteSchema.index({ matiere: 1 });

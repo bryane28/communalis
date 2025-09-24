@@ -8,13 +8,21 @@ import { QueryMessageDto } from './DTO/query-message.dto';
 export class MessagesService {
   constructor(@InjectModel(Message.name) private messageModel: Model<Message>) {}
 
-  async findAll(query: QueryMessageDto) {
+  async findAll(query: QueryMessageDto, currentUser?: { userId: string; role: string }) {
     const { page = 1, limit = 10, sortBy, sortOrder = 'asc', senderId, receiverId, content } = query;
     const filter: Record<string, any> = {};
 
     if (senderId) filter.senderId = senderId;
     if (receiverId) filter.receiverId = receiverId;
     if (content) filter.content = { $regex: content, $options: 'i' };
+
+    // Règles d'accès par rôle: un non-admin ne voit que ses propres messages
+    if (currentUser && currentUser.role !== 'admin') {
+      filter.$or = [
+        { senderId: currentUser.userId },
+        { receiverId: currentUser.userId },
+      ];
+    }
 
     const sort: Record<string, 1 | -1> = {};
     if (sortBy) sort[sortBy] = sortOrder === 'desc' ? -1 : 1;

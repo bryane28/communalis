@@ -14,3 +14,6 @@ export class Message extends Document {
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+// Indexes to speed up common queries
+MessageSchema.index({ senderId: 1 });
+MessageSchema.index({ receiverId: 1 });

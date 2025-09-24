@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException, BadRequestException, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException, BadRequestException, UseGuards, Query, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/roles.decorator';
@@ -7,6 +8,8 @@ import { QueryMessageDto } from './DTO/query-message.dto';
 import { CreateMessageDto } from './DTO/create-message.dto';
 import { UpdateMessageDto } from './DTO/update-message.dto';
 
+@ApiTags('messages')
+@ApiBearerAuth('bearer')
 @Controller('messages')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class MessagesController {
@@ -14,8 +17,8 @@ export class MessagesController {
 
   @Get()
   @Roles('admin', 'formateur', 'parent')
-  async findAll(@Query() query: QueryMessageDto) {
-    return this.messagesService.findAll(query);
+  async findAll(@Query() query: QueryMessageDto, @Req() req: any) {
+    return this.messagesService.findAll(query, req.user);
   }
 
   @Get(':id')
