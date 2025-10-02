@@ -29,4 +29,3 @@ export const StudentSchema = SchemaFactory.createForClass(Student);
 // Indexes to speed up common queries
 StudentSchema.index({ formateurId: 1 });
 StudentSchema.index({ parentId: 1 });
-StudentSchema.index({ matricule: 1 }, { unique: true });

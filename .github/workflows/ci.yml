@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })' || exit 1" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=10
+    env:
+      MONGODB_URI: mongodb://localhost:27017/communalis_ci
+      JWT_SECRET: ci_secret
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+        working-directory: mon-backend-app
+
+      - name: Lint
+        run: npm run lint
+        working-directory: mon-backend-app
+
+      - name: Unit tests
+        run: npm test -- --runInBand
+        working-directory: mon-backend-app
+
+      - name: E2E tests
+        run: npm run test:e2e -- --runInBand --detectOpenHandles
+        working-directory: mon-backend-app
+
+      - name: Build
+        run: npm run build
+        working-directory: mon-backend-app

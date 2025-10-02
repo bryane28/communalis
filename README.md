@@ -1,3 +1,229 @@
+# Communalis Backend (NestJS)
+
+Un backend NestJS pour la gestion des utilisateurs, élèves, notes et messages, avec authentification JWT, upload d'avatars, fichiers statiques et rate limiting.
+
+## Prérequis
+
+- Node.js 18+
+- npm 9+
+- MongoDB (local ou Atlas)
+
+## Installation
+
+```bash
+npm install
+```
+
+## Configuration (.env)
+
+Créez un fichier `.env` à la racine:
+
+```
+MONGODB_URI=<votre_uri_mongodb>
+JWT_SECRET=<votre_secret_jwt>
+PORT=3000
+# Liste d'origines CORS autorisées, séparées par des virgules
+CORS_ORIGINS=http://localhost:3000,http://localhost:4200
+```
+
+Le module `ConfigModule.forRoot({ isGlobal: true })` charge ces variables.
+`CORS_ORIGINS` est optionnel; par défaut `http://localhost:3000` et `http://localhost:4200` sont autorisés (voir `src/main.ts`).
+
+## Lancement
+
+```bash
+npm run start:dev   # mode watch
+npm run start       # dev simple
+npm run start:prod  # production
+```
+
+L'API est exposée sous le préfixe `/api` (voir `src/main.ts`).
+
+## Documentation Swagger
+
+Accédez à: `http://localhost:3000/api/docs`
+
+Dans l'UI Swagger, cliquez sur le bouton "Authorize" et collez votre JWT dans le champ `bearer` sous la forme `Bearer <token>`.
+
+## Authentification & JWT
+
+Endpoints principaux:
+
+- `POST /api/auth/register` — inscription simple.
+- `POST /api/auth/login` — retourne `{ access_token, user }`.
+- `POST /api/auth/request-otp` — demande d'OTP par email.
+- `POST /api/auth/verify-otp` — vérifie l'OTP.
+- `POST /api/auth/reset-password` — réinitialisation via OTP.
+- `POST /api/auth/register/initiate` et `POST /api/auth/register/complete` — flux en deux étapes.
+
+Exemple `login` (Body):
+
+```
+{
+  "email": "formateur1@example.com",
+  "motDePasse": "StrongPassw0rd!"
+}
+```
+
+Utilisez ensuite `Authorization: Bearer <access_token>` pour les routes protégées.
+
+## Rôles et accès
+
+- **admin**: gestion complète des utilisateurs, accès global en lecture.
+- **formateur**: CRUD élèves et notes, messages, lecture sélective selon rattachements.
+- **parent**: lecture des élèves/notes rattachés, messages, suppression limitée.
+
+### Tableau récapitulatif rôles → routes
+
+| Ressource / Action                 | Admin | Formateur | Parent |
+|------------------------------------|:-----:|:---------:|:------:|
+| Users: GET /api/users              |  Yes  |    No     |   No   |
+| Users: GET /api/users/:id          |  Yes  |    Yes    |   No   |
+| Users: POST /api/users             |  Yes  |    No     |   No   |
+| Users: PUT /api/users/:id          |  Yes  |    No     |   No   |
+| Users: DELETE /api/users/:id       |  Yes  |    No     |   No   |
+| Users: POST /api/users/:id/avatar  |  Yes  |    Yes    |  Yes   |
+| Users: DELETE /api/users/:id/avatar|  Yes  |    Yes    |  Yes   |
+| Students: GET /api/students        |  Yes  |    Yes    |   No   |
+| Students: GET /api/students/:id    |  Yes  |    Yes    |  Yes   |
+| Students: POST /api/students       |  No   |    Yes    |   No   |
+| Students: PUT /api/students/:id    |  No   |    Yes    |   No   |
+| Students: DELETE /api/students/:id |  No   |    Yes    |   No   |
+| Students: POST /:id/assign-formateur | Yes |    Yes    |   No   |
+| Students: POST /:id/assign-parent  |  Yes  |    Yes    |   No   |
+| Notes: GET /api/notes              |  Yes  |    Yes    |  Yes   |
+| Notes: GET /api/notes/:id          |  Yes  |    Yes    |  Yes   |
+| Notes: POST /api/notes             |  No   |    Yes    |   No   |
+| Notes: PUT /api/notes/:id          |  No   |    Yes    |   No   |
+| Notes: DELETE /api/notes/:id       |  No   |    Yes    |   No   |
+| Messages: GET /api/messages        |  Yes  |    Yes    |  Yes   |
+| Messages: GET /api/messages/:id    |  Yes  |    Yes    |  Yes   |
+| Messages: POST /api/messages       |  No   |    Yes    |  Yes   |
+| Messages: PUT /api/messages/:id    |  No   |    Yes    |  Yes   |
+| Messages: DELETE /api/messages/:id |  Yes  |    No     |   No   |
+
+## Conventions API (Swagger)
+
+- **Pagination standard**
+  - Format de réponse des listes: `{ data, meta }`.
+  - `meta` suit le schéma `MetaDoc` avec:
+    - `page`, `limit`, `total`, `totalPages`.
+  - Exemple:
+    ```json
+    {
+      "data": [ /* éléments */ ],
+      "meta": { "page": 1, "limit": 10, "total": 42, "totalPages": 5 }
+    }
+    ```
+
+- **Réponses standardisées**
+  - `MessageResponse`: `{ "message": "..." }` (utilisé pour les DELETE et opérations simples).
+  - `AvatarResponse`: `{ "message": "...", "avatarUrl": "/uploads/avatars/xxx.png" }` (upload avatar).
+
+- **Schémas réutilisables via $ref**
+  - Les réponses objet utilisent des modèles réutilisables référencés par `$ref`:
+    - `UserDoc`, `StudentDoc`, `NoteDoc`, `MessageDoc`.
+  - Les DTO d'entrée sont typés via `@ApiBody({ type: ... })` (ex: `CreateUserDto`, `UpdateUserDto`, etc.).
+  - Les listes exposent `data: { $ref: <Doc> }[]` et `meta: { $ref: MetaDoc }`.
+
+### Auth
+
+- **Entrées typées**: tous les endpoints Auth utilisent `@ApiBody({ type: ... })` avec leurs DTO (`RegisterDto`, `LoginDto`, `RequestOtpDto`, `VerifyOtpDto`, `ResetPasswordDto`, `RegisterInitiateDto`, `RegisterCompleteDto`).
+- **Schémas de sortie réutilisables**:
+  - `LoginResponseDoc`: `{ access_token, user: UserDoc }` pour `POST /auth/login`.
+  - `RegisterResponseDoc`: `{ message, user: UserDoc }` pour `POST /auth/register` et `POST /auth/register/complete`.
+  - `OtpRequestResponseDoc`: `{ message, email, code, expiresAt }` pour `POST /auth/request-otp` et `POST /auth/register/initiate`.
+  - Réponses message-only: `MessageResponse` pour `POST /auth/verify-otp` et `POST /auth/reset-password`.
+
+## Endpoints principaux (aperçu)
+
+- **Users** (`/api/users`)
+  - `GET /` (admin) — filtres: `nom, prenom, email, role, page, limit`.
+  - `GET /:id` (admin, formateur)
+  - `POST /` (admin)
+  - `PUT /:id` (admin)
+  - `DELETE /:id` (admin)
+  - `POST /:id/avatar` (admin, formateur, parent) — form-data `file`.
+
+- **Students** (`/api/students`)
+  - `GET /` (admin, formateur) — filtres: `nom, prenom, formateurId, parentId, page, limit`.
+  - `GET /:id` (admin, formateur, parent)
+  - `POST /` (formateur)
+  - `PUT /:id` (formateur)
+  - `DELETE /:id` (formateur)
+  - `POST /:id/assign-formateur` (admin, formateur)
+  - `POST /:id/assign-parent` (admin, formateur)
+
+- **Notes** (`/api/notes`)
+  - `GET /` (admin, formateur, parent) — filtres: `studentId, formateurId, matiere, minNote, maxNote, page, limit`.
+  - `GET /:id` (admin, formateur, parent)
+  - `POST /` (formateur)
+  - `PUT /:id` (formateur)
+  - `DELETE /:id` (formateur)
+
+- **Messages** (`/api/messages`)
+  - `GET /` (admin, formateur, parent) — filtres: `senderId, receiverId, content, page, limit`.
+  - `GET /:id` (admin, formateur, parent)
+  - `POST /` (formateur, parent)
+  - `PUT /:id` (formateur, parent)
+  - `DELETE /:id` (admin)
+
+## Postman
+
+- Collection: `postman/communalis.postman_collection.json`
+- Environnement: `postman/communalis.postman_environment.json` (baseUrl = `http://localhost:3000/api`)
+- Scripts inclus:
+  - Après `Auth > Login`, `{{token}}` est mis à jour automatiquement.
+  - Lors des créations, `{{userId}}`, `{{studentId}}`, `{{noteId}}`, `{{messageId}}` sont renseignés automatiquement.
+
+### Exemples rapides
+
+- Liste des utilisateurs (token admin requis):
+
+```
+GET {{baseUrl}}/users?page=1&limit=10
+Authorization: Bearer {{token}}
+```
+
+- Upload avatar:
+
+```
+POST {{baseUrl}}/users/{{userId}}/avatar
+Authorization: Bearer {{token}}
+Body: form-data, key "file" (type Fichier)
+```
+
+Les fichiers sont servis depuis `/uploads` (voir `ServeStaticModule`), ex: `http://localhost:3000/uploads/avatars/<fichier>`.
+
+## Rate Limiting
+
+Activé globalement avec `@nestjs/throttler` : 100 requêtes / 60s.
+
+- Configuration dans `src/app.module.ts` via `ThrottlerModule.forRoot([{ ttl: 60, limit: 100 }])` et guard global `ThrottlerGuard`.
+- Possibilité d'utiliser `@Throttle(ttl, limit)` par route et `@SkipThrottle()` pour exclure.
+
+## Upload d'avatars (Sharp)
+
+- Validation des mimetypes: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+- Redimensionnement max 512x512, rotation EXIF corrigée.
+- Le format d'origine est conservé (GIF converti en PNG). Voir `UsersController.uploadAvatar()`.
+
+## Tests
+
+```bash
+npm run test       # unit
+npm run test:e2e   # e2e
+npm run test:cov   # couverture
+```
+
+## Dépannage rapide
+
+- 401/403: vérifier le rôle exigé par la route (`@Roles(...)`) et le token (`/auth/login`).
+- 400 Validation: envoyer un JSON valide (Body raw JSON, `Content-Type: application/json`).
+- 429: rate limit atteint; attendre 60s.
+
+---
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

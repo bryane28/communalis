@@ -110,4 +110,36 @@ export class AuthService {
     await record.deleteOne();
     return { message: 'Mot de passe réinitialisé' };
   }
+
+  // -------- Two-step registration flow --------
+  async initiateRegister(dto: { nom: string; prenom: string; email: string }) {
+    const { email, nom, prenom } = dto;
+    const existing = await this.userModel.findOne({ email });
+    if (existing) throw new ConflictException('Email déjà utilisé');
+    // Envoie l'OTP à l'email fourni
+    const result = await this.requestOtp(email);
+    return { message: 'OTP envoyé pour inscription', email: result.email, expiresAt: result.expiresAt };
+  }
+
+  async completeRegister(dto: {
+    nom: string;
+    prenom: string;
+    email: string;
+    code: string;
+    motDePasse: string;
+    role: string;
+    telephone?: string;
+  }) {
+    const { email, code, motDePasse, nom, prenom, role, telephone } = dto;
+    // Vérifie OTP (supprime l'OTP après validation)
+    await this.verifyOtp(email, code);
+
+    // Double check: email non utilisé
+    const exists = await this.userModel.findOne({ email });
+    if (exists) throw new ConflictException('Email déjà utilisé');
+
+    const hash = await bcrypt.hash(motDePasse, 10);
+    const user = await this.userModel.create({ nom, prenom, email, motDePasse: hash, role, telephone });
+    return { message: 'Inscription complétée', user: { ...user.toObject(), motDePasse: undefined } };
+  }
 }

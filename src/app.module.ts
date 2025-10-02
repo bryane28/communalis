@@ -2,31 +2,31 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import * as Joi from 'joi';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { StudentsModule } from './students/students.module';
 import { MessagesModule } from './messages/messages.module';
 import { NotesModule } from './notes/notes.module';
+import { LoggerModule } from 'nestjs-pino';
+import { ThrottlerSkipSwaggerGuard } from './auth/throttler-skip-swagger.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      validationSchema: Joi.object({
-        MONGODB_URI: Joi.string().uri().required(),
-        JWT_SECRET: Joi.string().min(10).required(),
-        PORT: Joi.number().port().default(3000),
-        SMTP_HOST: Joi.string().optional(),
-        SMTP_PORT: Joi.number().optional(),
-        SMTP_USER: Joi.string().optional(),
-        SMTP_PASS: Joi.string().optional(),
-        SMTP_FROM: Joi.string().email().optional(),
-      }),
+    ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule.forRoot({
+      pinoHttp: process.env.NODE_ENV !== 'production'
+        ? {
+            transport: {
+              target: 'pino-pretty',
+              options: { singleLine: true, translateTime: 'SYS:standard' },
+            },
+          }
+        : {},
     }),
     ThrottlerModule.forRoot([
       {
@@ -34,12 +34,11 @@ import { NotesModule } from './notes/notes.module';
         limit: 100,
       },
     ]),
-    MongooseModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/communalis',
-      }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
     }),
+    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/communalis'),
     AuthModule,
     UsersModule,
     StudentsModule,
@@ -49,7 +48,7 @@ import { NotesModule } from './notes/notes.module';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ThrottlerSkipSwaggerGuard },
   ],
 })
 export class AppModule {}

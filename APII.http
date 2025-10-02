@@ -1,0 +1,48 @@
+# Envoie 10 logins pour déclencher le 429 après 5
+
+POST  http://localhost:3000/api/auth/register 
+Content-Type: application/json
+
+{
+    "nom": "Dupont",
+    "prenom": "Jean",
+    "email": "formateuré@example.com",
+    "motDePasse": "StrongPassw0rd!",
+    "role": "formateur",
+    "telephone": "+2250700000000"
+}
+
+###
+
+POST  http://localhost:3000/api/auth/login 
+Content-Type: application/json
+
+{
+    "email": "formateuré@example.com",
+    "motDePasse": "StrongPassw0rd!"
+}
+
+###
+
+POST  http://localhost:3000/api/auth/login 
+Content-Type: application/json
+
+{
+    "email": "formateuré@example.com",
+    "motDePasse": "StrongPassw0rd!"
+}
+
+###
+
+POST  http://localhost:3000/api/auth/login 
+Content-Type: application/json
+
+{
+   # Envoie 10 logins pour déclencher 429 après 5
+for i in {1..10}; do
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@example.com","motDePasse":"Password123"}' \
+    http://localhost:3000/api/auth/login
+done
+}

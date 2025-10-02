@@ -1,0 +1,428 @@
+{
+  "info": {
+    "name": "Communalis API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin\",\n  \"prenom\": \"User\",\n  \"email\": \"admin@example.com\",\n  \"motDePasse\": \"Password123\",\n  \"role\": \"admin\",\n  \"telephone\": \"0612345678\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.access_token) {",
+                  "  pm.environment.set('token', res.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"motDePasse\": \"Password123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["users"], "query": [
+              {"key":"page","value":"1"},
+              {"key":"limit","value":"10"}
+            ] }
+          }
+        },
+        {
+          "name": "Create User (formateur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const id = res && (res._id || (res.user && res.user._id));",
+                  "  if (id) { pm.environment.set('userId', id); }",
+                  "} catch (e) { /* ignore */ }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Doe\",\n  \"prenom\": \"John\",\n  \"email\": \"john.doe@example.com\",\n  \"motDePasse\": \"Password123\",\n  \"role\": \"formateur\",\n  \"telephone\": \"0611223344\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}/avatar", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}","avatar"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Avatar",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}/avatar", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}","avatar"] }
+          }
+        },
+        {
+          "name": "Get User by Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telephone\": \"0611223345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Create Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const id = res && (res._id || (res.student && res.student._id));",
+                  "  if (id) { pm.environment.set('studentId', id); }",
+                  "} catch (e) { /* ignore */ }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students", "host": ["{{baseUrl}}"], "path": ["students"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Durand\",\n  \"prenom\": \"Alice\",\n  \"age\": 10,\n  \"matricule\": \"MAT-001\",\n  \"formateurId\": \"{{formateurId}}\",\n  \"parentId\": \"{{parentId}}\",\n  \"remarques\": \"RAS\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["students"], "query": [
+              {"key":"page","value":"1"},
+              {"key":"limit","value":"20"}
+            ] }
+          }
+        },
+        {
+          "name": "Get Student by Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["students","{{studentId}}"] }
+          }
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["students","{{studentId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarques\": \"Suivi trimestriel\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["students","{{studentId}}"] }
+          }
+        },
+        {
+          "name": "Assign Parent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}/assign-parent", "host": ["{{baseUrl}}"], "path": ["students","{{studentId}}","assign-parent"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parentId\": \"{{parentId}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "Create Note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const id = res && (res._id || (res.note && res.note._id));",
+                  "  if (id) { pm.environment.set('noteId', id); }",
+                  "} catch (e) { /* ignore */ }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/notes", "host": ["{{baseUrl}}"], "path": ["notes"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"matiere\": \"Math\",\n  \"note\": 15,\n  \"remarques\": \"Bon travail\",\n  \"formateurId\": \"{{formateurId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/notes?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["notes"], "query": [
+              {"key":"page","value":"1"},
+              {"key":"limit","value":"10"}
+            ] }
+          }
+        },
+        {
+          "name": "Get Note by Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/notes/{{noteId}}", "host": ["{{baseUrl}}"], "path": ["notes","{{noteId}}"] }
+          }
+        },
+        {
+          "name": "Update Note",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/notes/{{noteId}}", "host": ["{{baseUrl}}"], "path": ["notes","{{noteId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarques\": \"Mise à jour\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Note",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/notes/{{noteId}}", "host": ["{{baseUrl}}"], "path": ["notes","{{noteId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Create Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const id = res && (res._id || (res.message && res.message._id));",
+                  "  if (id) { pm.environment.set('messageId', id); }",
+                  "} catch (e) { /* ignore */ }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/messages", "host": ["{{baseUrl}}"], "path": ["messages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": \"{{senderId}}\",\n  \"receiverId\": \"{{receiverId}}\",\n  \"content\": \"Bonjour\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/messages?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["messages"], "query": [
+              {"key":"page","value":"1"},
+              {"key":"limit","value":"10"}
+            ] }
+          }
+        },
+        {
+          "name": "Get Message by Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/messages/{{messageId}}", "host": ["{{baseUrl}}"], "path": ["messages","{{messageId}}"] }
+          }
+        },
+        {
+          "name": "Update Message",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/messages/{{messageId}}", "host": ["{{baseUrl}}"], "path": ["messages","{{messageId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Message mis à jour\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Message",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/messages/{{messageId}}", "host": ["{{baseUrl}}"], "path": ["messages","{{messageId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
