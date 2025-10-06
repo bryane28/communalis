@@ -19,7 +19,6 @@ RUN npm ci --omit=dev
 # Copy built dist and necessary assets
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src ./src
-COPY --from=build /app/.env ./.env
 
 # Ensure uploads directory exists (mounted in compose)
 RUN mkdir -p /app/uploads/avatars && mkdir -p /app/uploads
